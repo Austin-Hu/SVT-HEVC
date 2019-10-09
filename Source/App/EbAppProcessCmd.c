@@ -1122,6 +1122,7 @@ APPEXITCONDITIONTYPE ProcessInputBuffer(EbConfig_t *config, EbAppContext_t *appC
     int ret;
     uint32_t compressed10bitFrameSize = (uint32_t)((inputPaddedWidth*inputPaddedHeight) + 2 * ((inputPaddedWidth*inputPaddedWidth) >> (3 - colorFormat)));
     compressed10bitFrameSize += compressed10bitFrameSize / 4;
+    const uint32_t lumaReadSize = inputPaddedWidth * inputPaddedHeight << is16bit;
 
     if (config->injector && config->processedFrameCount)
     {
@@ -1178,8 +1179,25 @@ APPEXITCONDITIONTYPE ProcessInputBuffer(EbConfig_t *config, EbAppContext_t *appC
             }
         }
 
+        // Don't encode anything
+        headerPtr->nAllocLen    = 0;
+        headerPtr->nFilledLen   = 0;
+        headerPtr->nTickCount   = 0;
+        headerPtr->pAppPrivate  = NULL;
+        headerPtr->nFlags       = EB_BUFFERFLAG_EOS;
+        headerPtr->sliceType    = EB_INVALID_PICTURE;
+
+        // Optional: clear the input YUV buffer.
+        memset(((EB_H265_ENC_INPUT *)headerPtr->pBuffer)->luma, 0, lumaReadSize);
+        memset(((EB_H265_ENC_INPUT *)headerPtr->pBuffer)->cb, 0, lumaReadSize >> (3 - colorFormat));
+        memset(((EB_H265_ENC_INPUT *)headerPtr->pBuffer)->cr, 0, lumaReadSize >> (3 - colorFormat));
+
         // Send the picture
         EbH265EncSendPicture(componentHandle, headerPtr);
+
+        // To avoid APP_ExitConditionFinished immediately, otherwise only 1 frame would be encoded.
+        // If comment it out, the encoder would hang in EbH265GetPacket(), without the fix in codec.
+        headerPtr->nFlags       = 0;
 
         if ((config->processedFrameCount == (uint64_t)config->framesToBeEncoded) || config->stopEncoder) {
 
