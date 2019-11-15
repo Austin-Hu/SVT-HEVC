@@ -1020,7 +1020,8 @@ void* PictureDecisionKernel(void *inputPtr)
 
                         pictureControlSetPtr->disableTmvpFlag = sequenceControlSetPtr->staticConfig.unrestrictedMotionVector == 0 ? EB_TRUE : EB_FALSE;
 
-                        pictureControlSetPtr->useSrcRef = (sequenceControlSetPtr->staticConfig.improveSharpness && pictureControlSetPtr->temporalLayerIndex > 0) ?
+                        pictureControlSetPtr->useSrcRef = ((sequenceControlSetPtr->staticConfig.improveSharpness && sequenceControlSetPtr->inputResolution == INPUT_SIZE_4K_RANGE) &&
+                                pictureControlSetPtr->temporalLayerIndex > 0) ?
                             EB_TRUE :
                             EB_FALSE;
 
